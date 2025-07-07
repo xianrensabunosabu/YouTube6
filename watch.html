@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>動画再生 - 仙人YouTubeビュアー</title>
+  <style>
+    body { font-family: sans-serif; background: #1e1e2f; color: #fff; margin: 0; padding: 1em; }
+    .container { max-width: 800px; margin: auto; }
+    iframe { width: 100%; height: 450px; border: none; border-radius: 8px; }
+    .title { font-size: 1.5em; margin: 0.5em 0; }
+    .meta { color: #aaa; }
+    .back { margin-top: 1em; display: inline-block; padding: 0.5em 1em; background: #4caf50; color: white; border-radius: 4px; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <iframe id="player" src="" allowfullscreen></iframe>
+    <div class="title" id="video-title">タイトル読み込み中...</div>
+    <div class="meta" id="video-meta"></div>
+    <a href="index.html" class="back">← 戻る</a>
+  </div>
+
+  <script>
+    const API_KEYS = [
+      'AIzaSyCz7f0X_giaGyC9u1EfGZPBuAC9nXiL5Mo'
+      // 他のAPIキー追加可能
+    ];
+    let apiIndex = 0;
+
+    function getApiKey() {
+      if (apiIndex >= API_KEYS.length) {
+        alert('APIキーの利用制限に達しました。時間を置いて再度お試しください。');
+        return null;
+      }
+      return API_KEYS[apiIndex];
+    }
+
+    function nextApiKey() {
+      apiIndex++;
+      return getApiKey();
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const videoId = params.get('id');
+
+    if (!videoId) {
+      document.getElementById('video-title').textContent = '無効な動画IDです';
+      document.getElementById('player').style.display = 'none';
+    } else {
+      const fetchVideoInfo = async () => {
+        let apiKey = getApiKey();
+        if (!apiKey) return;
+
+        try {
+          const res = await fetch(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=${apiKey}`);
+          if (res.status === 403) { // 利用制限の場合キー変更
+            apiKey = nextApiKey();
+            if (!apiKey) return;
+            return fetchVideoInfo();
+          }
+          if (!res.ok) throw new Error('APIエラー');
+
+          const data = await res.json();
+          if (!data.items || data.items.length === 0) {
+            document.getElementById('video-title').textContent = '動画情報が見つかりません';
+            document.getElementById('player').style.display = 'none';
+            return;
+          }
+          const video = data.items[0];
+          document.getElementById('player').src = `https://www.youtube-nocookie.com/embed/${videoId}`;
+          document.getElementById('video-title').textContent = video.snippet.title;
+          document.getElementById('video-meta').textContent = `${video.snippet.channelTitle} - ${new Date(video.snippet.publishedAt).toLocaleDateString()}`;
+        } catch (e) {
+          alert('動画情報の取得に失敗しました。');
+        }
+      };
+
+      fetchVideoInfo();
+    }
+  </script>
+</body>
+</html>
