@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>チャンネルページ - 仙人YouTubeビュアー</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #1e1e2f;
+      color: #fff;
+      margin: 0;
+      padding: 1em;
+      max-width: 900px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    header {
+      font-size: 1.8em;
+      font-weight: bold;
+      margin-bottom: 1em;
+      text-align: center;
+      color: #4caf50;
+    }
+    .channel-header {
+      display: flex;
+      align-items: center;
+      gap: 1em;
+      margin-bottom: 1em;
+      background: #27293d;
+      padding: 1em;
+      border-radius: 8px;
+    }
+    .channel-icon {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      background: #444667;
+      flex-shrink: 0;
+    }
+    .channel-info {
+      flex: 1;
+    }
+    .channel-title {
+      font-size: 1.5em;
+      font-weight: bold;
+      margin-bottom: 0.3em;
+    }
+    .channel-subscribers {
+      color: #aaa;
+      margin-bottom: 0.8em;
+    }
+    .channel-description {
+      font-size: 0.95em;
+      line-height: 1.4;
+      color: #ccc;
+      white-space: pre-wrap;
+    }
+    .videos-section {
+      margin-top: 2em;
+    }
+    .videos-section h2 {
+      margin-bottom: 0.8em;
+      border-bottom: 2px solid #4caf50;
+      padding-bottom: 0.3em;
+    }
+    .video-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1em;
+    }
+    .video-card {
+      background: #2d2f44;
+      border-radius: 8px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .video-card:hover {
+      transform: scale(1.03);
+    }
+    .video-card img {
+      width: 100%;
+      display: block;
+    }
+    .video-card .info {
+      padding: 0.5em;
+    }
+    .video-card .title {
+      font-weight: bold;
+      margin-bottom: 0.3em;
+      font-size: 1em;
+      color: #fff;
+    }
+    .video-card .published {
+      color: #aaa;
+      font-size: 0.85em;
+    }
+    .back-link {
+      display: inline-block;
+      margin-top: 1.5em;
+      padding: 0.5em 1em;
+      background: #4caf50;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>チャンネルページ - 仙人YouTubeビュアー</header>
+
+  <div id="channel-container">
+    <div class="channel-header">
+      <img src="" alt="チャンネルアイコン" class="channel-icon" id="channel-icon" />
+      <div class="channel-info">
+        <div class="channel-title" id="channel-title">読み込み中...</div>
+        <div class="channel-subscribers" id="channel-subscribers"></div>
+        <div class="channel-description" id="channel-description"></div>
+      </div>
+    </div>
+
+    <div class="videos-section">
+      <h2>動画一覧</h2>
+      <div id="video-list" class="video-list"></div>
+    </div>
+  </div>
+
+  <a href="index.html" class="back-link">← 戻る</a>
+
+  <script>
+    const API_KEYS = [
+      'AIzaSyCz7f0X_giaGyC9u1EfGZPBuAC9nXiL5Mo'
+      // 他のAPIキー追加可能
+    ];
+    let apiIndex = 0;
+
+    function getApiKey() {
+      if (apiIndex >= API_KEYS.length) {
+        alert('APIキーの利用制限に達しました。時間を置いて再試行してください。');
+        return null;
+      }
+      return API_KEYS[apiIndex];
+    }
+
+    function nextApiKey() {
+      apiIndex++;
+      return getApiKey();
+    }
+
+    // URLから channelId を取得
+    const params = new URLSearchParams(window.location.search);
+    const channelId = params.get('id');
+
+    if (!channelId) {
+      document.getElementById('channel-title').textContent = '無効なチャンネルIDです';
+      document.getElementById('channel-container').style.display = 'none';
+    } else {
+      async function fetchJson(url) {
+        let apiKey = getApiKey();
+        if (!apiKey) return null;
+
+        try {
+          const res = await fetch(url.replace('API_KEY', apiKey));
+          if (res.status === 403) {
+            apiKey = nextApiKey();
+            if (!apiKey) return null;
+            return fetchJson(url);
+          }
+          if (!res.ok) throw new Error('APIエラー');
+          return await res.json();
+        } catch {
+          alert('API呼び出し中にエラーが発生しました');
+          return null;
+        }
+      }
+
+      async function loadChannelInfo() {
+        // チャンネル情報取得
+        const channelInfoUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=API_KEY`;
+        const data = await fetchJson(channelInfoUrl);
+        if (!data || !data.items || data.items.length === 0) {
+          document.getElementById('channel-title').textContent = 'チャンネルが見つかりません';
+          return;
+        }
+        const channel = data.items[0];
+        document.getElementById('channel-icon').src = channel.snippet.thumbnails.high.url;
+        document.getElementById('channel-title').textContent = channel.snippet.title;
+        document.getElementById('channel-description').textContent = channel.snippet.description || '(説明なし)';
+        document.getElementById('channel-subscribers').textContent = 
+          `登録者数: ${Number(channel.statistics.subscriberCount).toLocaleString()}人`;
+      }
+
+      async function loadVideos(pageToken = '') {
+        const maxResults = 12;
+        // チャンネルの動画一覧を取得（search APIでチャンネル内動画取得）
+        const videosUrl = `https://www.googleapis.com/youtube/v3/search?key=API_KEY&channelId=${channelId}&part=snippet,id&order=date&maxResults=${maxResults}&pageToken=${pageToken}&type=video`;
+        const data = await fetchJson(videosUrl);
+        if (!data || !data.items) return;
+
+        const videoListEl = document.getElementById('video-list');
+
+        data.items.forEach(video => {
+          const videoId = video.id.videoId;
+          if (!videoId) return;
+
+          const card = document.createElement('div');
+          card.className = 'video-card';
+          card.innerHTML = `
+            <img src="${video.snippet.thumbnails.medium.url}" alt="${video.snippet.title}" />
+            <div class="info">
+              <div class="title">${video.snippet.title}</div>
+              <div class="published">${new Date(video.snippet.publishedAt).toLocaleDateString()}</div>
+            </div>
+          `;
+          card.onclick = () => {
+            window.location.href = `watch.html?id=${videoId}`;
+          };
+          videoListEl.appendChild(card);
+        });
+
+        // 次ページがあれば無限スクロールで取得（省略中）
+        // もし必要ならloadVideos(data.nextPageToken)をスクロール時に呼ぶ実装も可能です
+      }
+
+      loadChannelInfo();
+      loadVideos();
+    }
+  </script>
+</body>
+</html>
