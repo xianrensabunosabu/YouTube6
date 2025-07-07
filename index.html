@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>仙人YouTubeビュアー</title>
+  <style>
+    body { font-family: sans-serif; background: #1e1e2f; color: #fff; margin: 0; }
+    header { background: #27293d; padding: 1em; text-align: center; font-size: 1.5em; }
+    nav { display: flex; justify-content: center; background: #33354a; }
+    nav button { flex: 1; padding: 1em; border: none; background: none; color: #aaa; cursor: pointer; }
+    nav button.active { background: #444667; color: #fff; font-weight: bold; }
+    main { padding: 1em; }
+    section { display: none; }
+    section.active { display: block; }
+    .search-box { display: flex; margin-bottom: 1em; }
+    .search-box input { flex: 1; padding: 0.5em; border-radius: 4px 0 0 4px; border: none; }
+    .search-box button { padding: 0.5em 1em; background: #4caf50; color: white; border: none; border-radius: 0 4px 4px 0; cursor: pointer; }
+    .video-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1em; }
+    .video-card { background: #2d2f44; border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s; }
+    .video-card:hover { transform: scale(1.03); }
+    .video-card img { width: 100%; display: block; }
+    .video-card .info { padding: 0.5em; }
+    .video-card .title { font-weight: bold; margin-bottom: 0.3em; }
+    .video-card .channel { color: #aaa; font-size: 0.9em; }
+    .clear-btn { background: #f44336; color: white; padding: 0.5em 1em; border: none; margin-bottom: 1em; border-radius: 4px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header>仙人YouTubeビュアー</header>
+  <nav>
+    <button id="tab-search" class="active">検索</button>
+    <button id="tab-history">履歴</button>
+    <button id="tab-favorites">お気に入り</button>
+  </nav>
+  <main>
+    <section id="search-section" class="active">
+      <div class="search-box">
+        <input type="text" id="search-input" placeholder="検索ワードを入力...">
+        <button id="search-button">検索</button>
+      </div>
+      <div id="video-list" class="video-list"></div>
+    </section>
+
+    <section id="history-section">
+      <button class="clear-btn" id="clear-history">履歴を全削除</button>
+      <div id="history-list" class="video-list"></div>
+    </section>
+
+    <section id="favorites-section">
+      <div id="favorites-list" class="video-list"></div>
+    </section>
+  </main>
+
+  <script>
+    const API_KEYS = [
+      'AIzaSyCz7f0X_giaGyC9u1EfGZPBuAC9nXiL5Mo'
+      // 他のAPIキーも追加可能
+    ];
+    let apiIndex = 0;
+
+    const STORAGE_HISTORY = 'sennin_youtube_history';
+    const STORAGE_FAV = 'sennin_youtube_favorites';
+
+    const searchInput = document.getElementById('search-input');
+    const searchButton = document.getElementById('search-button');
+    const videoListEl = document.getElementById('video-list');
+    const historyListEl = document.getElementById('history-list');
+    const favoritesListEl = document.getElementById('favorites-list');
+
+    const tabSearch = document.getElementById('tab-search');
+    const tabHistory = document.getElementById('tab-history');
+    const tabFavorites = document.getElementById('tab-favorites');
+    const clearHistoryBtn = document.getElementById('clear-history');
+
+    let nextPageToken = '';
+    let currentQuery = '';
+    let isLoading = false;
+
+    let history = JSON.parse(localStorage.getItem(STORAGE_HISTORY) || '[]');
+    let favorites = JSON.parse(localStorage.getItem(STORAGE_FAV) || '[]');
+
+    function save(key, data) {
+      localStorage.setItem(key, JSON.stringify(data));
+    }
+
+    async function fetchWithKeys(url) {
+      while (apiIndex < API_KEYS.length) {
+        const apiKey = API_KEYS[apiIndex];
+        const fullUrl = url.replace('API_KEY', apiKey);
+        const res = await fetch(fullUrl);
+        if (res.status === 200) return res.json();
+        apiIndex++;
+      }
+      throw new Error("APIキーの上限に達しました");
+    }
+
+    async function fetchVideos(query, append = false) {
+      if (isLoading || !query) return;
+      isLoading = true;
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(query)}&pageToken=${nextPageToken}&key=API_KEY`;
+      try {
+        const data = await fetchWithKeys(url);
+        nextPageToken = data.nextPageToken || '';
+        if (!append) videoListEl.innerHTML = '';
+        appendVideos(data.items, videoListEl);
+      } catch (e) {
+        alert("APIの利用制限に達しました。後で再試行してください。");
+      }
+      isLoading = false;
+    }
+
+    function appendVideos(videos, container) {
+      videos.forEach(video => {
+        const id = video.id.videoId || video.id;
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.innerHTML = `
+          <img src="${video.snippet.thumbnails.medium.url}" alt="">
+          <div class="info">
+            <div class="title">${video.snippet.title}</div>
+            <div class="channel">${video.snippet.channelTitle}</div>
+          </div>
+        `;
+        card.onclick = () => {
+          // 履歴に追加
+          if (!history.some(v => (v.id.videoId || v.id) === id)) {
+            history.unshift(video);
+            history = history.slice(0, 50);
+            save(STORAGE_HISTORY, history);
+          }
+          window.location.href = `watch.html?id=${id}`;
+        };
+
+        // 右クリックでお気に入り登録/解除
+        card.oncontextmenu = (e) => {
+          e.preventDefault();
+          const favIndex = favorites.findIndex(v => (v.id.videoId || v.id) === id);
+          if (favIndex >= 0) {
+            favorites.splice(favIndex, 1);
+            alert('お気に入りから削除しました');
+          } else {
+            favorites.unshift(video);
+            alert('お気に入りに登録しました');
+          }
+          save(STORAGE_FAV, favorites);
+          if (tabFavorites.classList.contains('active')) renderFavorites();
+        };
+
+        container.appendChild(card);
+      });
+    }
+
+    function renderHistory() {
+      historyListEl.innerHTML = '';
+      appendVideos(history, historyListEl);
+    }
+
+    function renderFavorites() {
+      favoritesListEl.innerHTML = '';
+      appendVideos(favorites, favoritesListEl);
+    }
+
+    function switchTab(tab) {
+      [tabSearch, tabHistory, tabFavorites].forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('section').forEach(sec => sec.classList.remove('active'));
+
+      if (tab === 'search') {
+        tabSearch.classList.add('active');
+        document.getElementById('search-section').classList.add('active');
+      } else if (tab === 'history') {
+        tabHistory.classList.add('active');
+        document.getElementById('history-section').classList.add('active');
+        renderHistory();
+      } else if (tab === 'favorites') {
+        tabFavorites.classList.add('active');
+        document.getElementById('favorites-section').classList.add('active');
+        renderFavorites();
+      }
+    }
+
+    tabSearch.onclick = () => switchTab('search');
+    tabHistory.onclick = () => switchTab('history');
+    tabFavorites.onclick = () => switchTab('favorites');
+    clearHistoryBtn.onclick = () => {
+      if (confirm('履歴をすべて削除しますか？')) {
+        history = [];
+        save(STORAGE_HISTORY, history);
+        renderHistory();
+      }
+    };
+
+    searchButton.onclick = () => {
+      const q = searchInput.value.trim();
+      if (q) {
+        currentQuery = q;
+        nextPageToken = '';
+        fetchVideos(currentQuery);
+      }
+    };
+    searchInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') searchButton.click();
+    });
+
+    // 無限スクロール
+    window.addEventListener('scroll', () => {
+      const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
+      if (nearBottom && currentQuery) {
+        fetchVideos(currentQuery, true);
+      }
+    });
+
+    // 最初は検索タブ表示
+    switchTab('search');
+  </script>
+</body>
+</html>
