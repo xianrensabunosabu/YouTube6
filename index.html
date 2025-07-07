@@ -21,7 +21,7 @@
     .video-card img { width: 100%; display: block; }
     .video-card .info { padding: 0.5em; }
     .video-card .title { font-weight: bold; margin-bottom: 0.3em; }
-    .video-card .channel { color: #aaa; font-size: 0.9em; }
+    .video-card .channel a { color: #4caf50; text-decoration: underline; }
     .clear-btn { background: #f44336; color: white; padding: 0.5em 1em; border: none; margin-bottom: 1em; border-radius: 4px; cursor: pointer; }
   </style>
 </head>
@@ -53,9 +53,10 @@
 
   <script>
     const API_KEYS = [
-  'AIzaSyCz7f0X_giaGyC9u1EfGZPBuAC9nXiL5Mo',
-  'AIzaSyD233z_OZ7puYydK5QvaMi3jvCsG4WYZ5U'
-];
+      'AIzaSyCz7f0X_giaGyC9u1EfGZPBuAC9nXiL5Mo',
+      'AIzaSyD233z_OZ7puYydK5QvaMi3jvCsG4WYZ5U'
+      // 必要に応じて追加
+    ];
     let apiIndex = 0;
 
     const STORAGE_HISTORY = 'sennin_youtube_history';
@@ -88,10 +89,10 @@
         const apiKey = API_KEYS[apiIndex];
         const fullUrl = url.replace('API_KEY', apiKey);
         const res = await fetch(fullUrl);
-        if (res.status === 200) return res.json();
+        if (res.ok) return res.json();
         apiIndex++;
       }
-      throw new Error("APIキーの上限に達しました");
+      throw new Error("APIキー制限に達しました");
     }
 
     async function fetchVideos(query, append = false) {
@@ -104,7 +105,7 @@
         if (!append) videoListEl.innerHTML = '';
         appendVideos(data.items, videoListEl);
       } catch (e) {
-        alert("APIの利用制限に達しました。後で再試行してください。");
+        alert("APIエラー: 利用制限を超えたか、通信に失敗しました。");
       }
       isLoading = false;
     }
@@ -112,17 +113,21 @@
     function appendVideos(videos, container) {
       videos.forEach(video => {
         const id = video.id.videoId || video.id;
+        const channelId = video.snippet.channelId;
         const card = document.createElement('div');
         card.className = 'video-card';
         card.innerHTML = `
           <img src="${video.snippet.thumbnails.medium.url}" alt="">
           <div class="info">
             <div class="title">${video.snippet.title}</div>
-            <div class="channel">${video.snippet.channelTitle}</div>
+            <div class="channel">
+              <a href="channel.html?id=${channelId}" onclick="event.stopPropagation();">
+                ${video.snippet.channelTitle}
+              </a>
+            </div>
           </div>
         `;
         card.onclick = () => {
-          // 履歴に追加
           if (!history.some(v => (v.id.videoId || v.id) === id)) {
             history.unshift(video);
             history = history.slice(0, 50);
@@ -130,8 +135,6 @@
           }
           window.location.href = `watch.html?id=${id}`;
         };
-
-        // 右クリックでお気に入り登録/解除
         card.oncontextmenu = (e) => {
           e.preventDefault();
           const favIndex = favorites.findIndex(v => (v.id.videoId || v.id) === id);
@@ -140,12 +143,11 @@
             alert('お気に入りから削除しました');
           } else {
             favorites.unshift(video);
-            alert('お気に入りに登録しました');
+            alert('お気に入りに追加しました');
           }
           save(STORAGE_FAV, favorites);
           if (tabFavorites.classList.contains('active')) renderFavorites();
         };
-
         container.appendChild(card);
       });
     }
@@ -197,11 +199,11 @@
         fetchVideos(currentQuery);
       }
     };
+
     searchInput.addEventListener('keypress', e => {
       if (e.key === 'Enter') searchButton.click();
     });
 
-    // 無限スクロール
     window.addEventListener('scroll', () => {
       const nearBottom = window.innerHeight + window.scrollY >= document.body.offsetHeight - 200;
       if (nearBottom && currentQuery) {
@@ -209,7 +211,6 @@
       }
     });
 
-    // 最初は検索タブ表示
     switchTab('search');
   </script>
 </body>
