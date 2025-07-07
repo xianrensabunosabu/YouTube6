@@ -1,71 +1,50 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <title>チャンネルページ - 仙人YouTubeビュアー</title>
+  <meta charset="UTF-8">
+  <title>チャンネル情報 - 仙人YouTubeビュアー</title>
   <style>
-    body {
-      font-family: sans-serif;
-      background: #1e1e2f;
-      color: #fff;
-      margin: 0;
-      padding: 1em;
-      max-width: 900px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    header {
-      font-size: 1.8em;
-      font-weight: bold;
-      margin-bottom: 1em;
-      text-align: center;
-      color: #4caf50;
-    }
+    body { font-family: sans-serif; background: #1e1e2f; color: #fff; margin: 0; padding: 1em; }
+    .container { max-width: 900px; margin: auto; }
     .channel-header {
       display: flex;
       align-items: center;
       gap: 1em;
       margin-bottom: 1em;
-      background: #27293d;
-      padding: 1em;
-      border-radius: 8px;
     }
-    .channel-icon {
-      width: 96px;
-      height: 96px;
+    .channel-header img {
+      width: 64px;
+      height: 64px;
       border-radius: 50%;
-      background: #444667;
-      flex-shrink: 0;
+      border: 2px solid #4caf50;
     }
-    .channel-info {
-      flex: 1;
-    }
-    .channel-title {
-      font-size: 1.5em;
+    .channel-name {
+      font-size: 1.4em;
       font-weight: bold;
-      margin-bottom: 0.3em;
     }
-    .channel-subscribers {
+    .subscriber-count {
       color: #aaa;
-      margin-bottom: 0.8em;
+      font-size: 0.9em;
     }
     .channel-description {
-      font-size: 0.95em;
-      line-height: 1.4;
-      color: #ccc;
-      white-space: pre-wrap;
+      margin: 1em 0;
+      max-height: 4.5em;
+      overflow: hidden;
+      position: relative;
     }
-    .videos-section {
-      margin-top: 2em;
+    .channel-description.expanded {
+      max-height: none;
     }
-    .videos-section h2 {
-      margin-bottom: 0.8em;
-      border-bottom: 2px solid #4caf50;
-      padding-bottom: 0.3em;
+    .toggle-description {
+      color: #4caf50;
+      cursor: pointer;
+      font-size: 0.9em;
+      margin-top: 0.5em;
+      display: inline-block;
     }
     .video-list {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
       gap: 1em;
     }
     .video-card {
@@ -88,142 +67,96 @@
     .video-card .title {
       font-weight: bold;
       margin-bottom: 0.3em;
-      font-size: 1em;
-      color: #fff;
     }
-    .video-card .published {
+    .video-card .date {
       color: #aaa;
       font-size: 0.85em;
     }
-    .back-link {
-      display: inline-block;
-      margin-top: 1.5em;
-      padding: 0.5em 1em;
-      background: #4caf50;
-      color: white;
-      text-decoration: none;
-      border-radius: 4px;
-    }
+    .back { display: inline-block; margin-top: 1em; color: #4caf50; text-decoration: none; }
   </style>
 </head>
 <body>
-  <header>チャンネルページ - 仙人YouTubeビュアー</header>
-
-  <div id="channel-container">
+  <div class="container">
     <div class="channel-header">
-      <img src="" alt="チャンネルアイコン" class="channel-icon" id="channel-icon" />
-      <div class="channel-info">
-        <div class="channel-title" id="channel-title">読み込み中...</div>
-        <div class="channel-subscribers" id="channel-subscribers"></div>
-        <div class="channel-description" id="channel-description"></div>
+      <img id="channel-icon" src="" alt="Channel Icon">
+      <div>
+        <div class="channel-name" id="channel-title">チャンネル名</div>
+        <div class="subscriber-count" id="subscriber-count">登録者数読み込み中...</div>
       </div>
     </div>
-
-    <div class="videos-section">
-      <h2>動画一覧</h2>
-      <div id="video-list" class="video-list"></div>
-    </div>
+    <div class="channel-description" id="channel-description"></div>
+    <span class="toggle-description" id="toggle-description">もっと見る</span>
+    <div class="video-list" id="channel-videos"></div>
+    <a href="index.html" class="back">← ホームに戻る</a>
   </div>
-
-  <a href="index.html" class="back-link">← 戻る</a>
 
   <script>
     const API_KEYS = [
-  'AIzaSyCz7f0X_giaGyC9u1EfGZPBuAC9nXiL5Mo',
-  'AIzaSyD233z_OZ7puYydK5QvaMi3jvCsG4WYZ5U'
-];
+      'YOUR_API_KEY_1',
+      'YOUR_API_KEY_2'
+    ];
     let apiIndex = 0;
 
-    function getApiKey() {
-      if (apiIndex >= API_KEYS.length) {
-        alert('APIキーの利用制限に達しました。時間を置いて再試行してください。');
-        return null;
-      }
-      return API_KEYS[apiIndex];
-    }
-
-    function nextApiKey() {
-      apiIndex++;
-      return getApiKey();
-    }
-
-    // URLから channelId を取得
     const params = new URLSearchParams(window.location.search);
     const channelId = params.get('id');
 
-    if (!channelId) {
-      document.getElementById('channel-title').textContent = '無効なチャンネルIDです';
-      document.getElementById('channel-container').style.display = 'none';
-    } else {
-      async function fetchJson(url) {
-        let apiKey = getApiKey();
-        if (!apiKey) return null;
-
-        try {
-          const res = await fetch(url.replace('API_KEY', apiKey));
-          if (res.status === 403) {
-            apiKey = nextApiKey();
-            if (!apiKey) return null;
-            return fetchJson(url);
-          }
-          if (!res.ok) throw new Error('APIエラー');
-          return await res.json();
-        } catch {
-          alert('API呼び出し中にエラーが発生しました');
-          return null;
-        }
+    async function fetchWithKeys(url) {
+      while (apiIndex < API_KEYS.length) {
+        const fullUrl = url.replace('API_KEY', API_KEYS[apiIndex]);
+        const res = await fetch(fullUrl);
+        if (res.ok) return res.json();
+        apiIndex++;
       }
+      throw new Error("APIキーの上限に達しました");
+    }
 
-      async function loadChannelInfo() {
-        // チャンネル情報取得
-        const channelInfoUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=API_KEY`;
-        const data = await fetchJson(channelInfoUrl);
-        if (!data || !data.items || data.items.length === 0) {
-          document.getElementById('channel-title').textContent = 'チャンネルが見つかりません';
-          return;
-        }
-        const channel = data.items[0];
-        document.getElementById('channel-icon').src = channel.snippet.thumbnails.high.url;
-        document.getElementById('channel-title').textContent = channel.snippet.title;
-        document.getElementById('channel-description').textContent = channel.snippet.description || '(説明なし)';
-        document.getElementById('channel-subscribers').textContent = 
-          `登録者数: ${Number(channel.statistics.subscriberCount).toLocaleString()}人`;
-      }
+    async function loadChannelInfo() {
+      const url = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=API_KEY`;
+      const data = await fetchWithKeys(url);
+      const channel = data.items[0];
 
-      async function loadVideos(pageToken = '') {
-        const maxResults = 12;
-        // チャンネルの動画一覧を取得（search APIでチャンネル内動画取得）
-        const videosUrl = `https://www.googleapis.com/youtube/v3/search?key=API_KEY&channelId=${channelId}&part=snippet,id&order=date&maxResults=${maxResults}&pageToken=${pageToken}&type=video`;
-        const data = await fetchJson(videosUrl);
-        if (!data || !data.items) return;
+      document.getElementById('channel-title').textContent = channel.snippet.title;
+      document.getElementById('subscriber-count').textContent =
+        `登録者数: ${Number(channel.statistics.subscriberCount).toLocaleString()}人`;
+      document.getElementById('channel-icon').src = channel.snippet.thumbnails.default.url;
+      document.getElementById('channel-description').textContent = channel.snippet.description;
+    }
 
-        const videoListEl = document.getElementById('video-list');
+    async function loadChannelVideos() {
+      const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&maxResults=12&order=date&type=video&key=API_KEY`;
+      const data = await fetchWithKeys(url);
+      const container = document.getElementById('channel-videos');
 
-        data.items.forEach(video => {
-          const videoId = video.id.videoId;
-          if (!videoId) return;
+      data.items.forEach(item => {
+        const videoId = item.id.videoId;
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.innerHTML = `
+          <img src="${item.snippet.thumbnails.medium.url}" alt="">
+          <div class="info">
+            <div class="title">${item.snippet.title}</div>
+            <div class="date">${new Date(item.snippet.publishedAt).toLocaleDateString()}</div>
+          </div>
+        `;
+        card.onclick = () => {
+          window.location.href = `watch.html?id=${videoId}`;
+        };
+        container.appendChild(card);
+      });
+    }
 
-          const card = document.createElement('div');
-          card.className = 'video-card';
-          card.innerHTML = `
-            <img src="${video.snippet.thumbnails.medium.url}" alt="${video.snippet.title}" />
-            <div class="info">
-              <div class="title">${video.snippet.title}</div>
-              <div class="published">${new Date(video.snippet.publishedAt).toLocaleDateString()}</div>
-            </div>
-          `;
-          card.onclick = () => {
-            window.location.href = `watch.html?id=${videoId}`;
-          };
-          videoListEl.appendChild(card);
-        });
+    document.getElementById('toggle-description').onclick = () => {
+      const desc = document.getElementById('channel-description');
+      const toggle = document.getElementById('toggle-description');
+      desc.classList.toggle('expanded');
+      toggle.textContent = desc.classList.contains('expanded') ? '閉じる' : 'もっと見る';
+    };
 
-        // 次ページがあれば無限スクロールで取得（省略中）
-        // もし必要ならloadVideos(data.nextPageToken)をスクロール時に呼ぶ実装も可能です
-      }
-
+    if (channelId) {
       loadChannelInfo();
-      loadVideos();
+      loadChannelVideos();
+    } else {
+      document.body.innerHTML = '<p style="color:red;">チャンネルIDが指定されていません。</p>';
     }
   </script>
 </body>
