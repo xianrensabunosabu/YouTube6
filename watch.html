@@ -11,24 +11,29 @@
       margin: 0;
       padding: 1em;
     }
+
     .container {
       max-width: 900px;
       margin: auto;
     }
+
     iframe {
       width: 100%;
       height: 450px;
       border: none;
       border-radius: 8px;
     }
+
     .title {
       font-size: 1.5em;
       margin: 0.5em 0;
     }
+
     .meta {
       color: #aaa;
       margin-bottom: 1em;
     }
+
     .back {
       margin-top: 1em;
       display: inline-block;
@@ -38,20 +43,49 @@
       border-radius: 4px;
       text-decoration: none;
     }
+
     #comments {
-      background: #2d2f44;
-      padding: 1em;
-      border-radius: 8px;
       margin-top: 2em;
     }
+
     .comment {
-      margin-bottom: 1em;
+      display: flex;
+      margin-bottom: 1.2em;
     }
-    .comment p {
-      margin: 0.2em 0;
+
+    .bubble {
+      background: #2d2f44;
+      padding: 0.8em 1em;
+      border-radius: 16px;
+      max-width: 85%;
+      position: relative;
     }
-    .comment hr {
-      border-color: #444;
+
+    .bubble::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      left: -10px;
+      border: 8px solid transparent;
+      border-right-color: #2d2f44;
+    }
+
+    .author {
+      font-weight: bold;
+      font-size: 0.9em;
+    }
+
+    .date {
+      font-size: 0.75em;
+      color: #aaa;
+      margin-left: 0.5em;
+    }
+
+    .text {
+      margin-top: 0.3em;
+      font-size: 0.95em;
+      white-space: pre-wrap;
+      line-height: 1.5;
     }
   </style>
 </head>
@@ -142,9 +176,13 @@
           const div = document.createElement('div');
           div.className = 'comment';
           div.innerHTML = `
-            <p><strong>${c.authorDisplayName}</strong> <span style="color:#aaa; font-size:0.8em;">${new Date(c.publishedAt).toLocaleString()}</span></p>
-            <p>${c.textDisplay}</p>
-            <hr>
+            <div class="bubble">
+              <div>
+                <span class="author">${c.authorDisplayName}</span>
+                <span class="date">${new Date(c.publishedAt).toLocaleString()}</span>
+              </div>
+              <div class="text">${c.textDisplay}</div>
+            </div>
           `;
           commentsEl.appendChild(div);
         });
