@@ -3,6 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>仙人YouTubeビュアー</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1e1e2f">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon-192.png">
   <style>
     body { font-family: sans-serif; background: #1e1e2f; color: #fff; margin: 0; }
     header { background: #27293d; padding: 1em; text-align: center; font-size: 1.5em; }
@@ -56,7 +60,6 @@
       'AIzaSyCz7f0X_giaGyC9u1EfGZPBuAC9nXiL5Mo',
       'AIzaSyD233z_OZ7puYydK5QvaMi3jvCsG4WYZ5U',
       'AIzaSyAUNfN3b6kTqqwwC07jRQY2xSqw4DPokMs'
-      // 必要に応じて追加
     ];
     let apiIndex = 0;
 
@@ -213,6 +216,13 @@
     });
 
     switchTab('search');
+
+    // ✅ PWA: Service Worker登録
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log("✅ Service Worker 登録成功:", reg.scope))
+        .catch(err => console.error("❌ Service Worker 登録失敗:", err));
+    }
   </script>
 </body>
 </html>
