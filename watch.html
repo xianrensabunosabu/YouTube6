@@ -2,7 +2,11 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>動画再生 - 仙人YouTubeビュアー</title>
+  <title>Lentrance reader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#27293d" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" />
   <style>
     body {
       font-family: sans-serif;
@@ -17,7 +21,7 @@
       margin: auto;
     }
 
-    video {
+    iframe {
       width: 100%;
       height: 450px;
       border-radius: 8px;
@@ -32,6 +36,15 @@
     .meta {
       color: #aaa;
       margin-bottom: 1em;
+    }
+
+    .meta a {
+      color: #4fc3f7;
+      text-decoration: none;
+    }
+
+    .meta a:hover {
+      text-decoration: underline;
     }
 
     .back {
@@ -91,7 +104,11 @@
 </head>
 <body>
   <div class="container">
-    <video id="video" controls autoplay></video>
+    <!-- 🎥 YouTube埋め込みiframe -->
+    <iframe id="video-frame" frameborder="0"
+      allow="autoplay; encrypted-media"
+      allowfullscreen></iframe>
+
     <div class="title" id="video-title">タイトル読み込み中...</div>
     <div class="meta" id="video-meta"></div>
     <a href="index.html" class="back">← 戻る</a>
@@ -102,8 +119,15 @@
 
   <script>
     const API_KEYS = [
-      'AIzaSyCz7f0X_giaGyC9u1EfGZPBuAC9nXiL5Mo',
-      'AIzaSyD233z_OZ7puYydK5QvaMi3jvCsG4WYZ5U'
+      'AIzaSyAHtZ0sgA9x7yBFnJO4pFTexhn4eQMa4iE',
+      'AIzaSyB61hHLbtWnXpUwGePHF47VTC1vFCfRUx0',
+      'AIzaSyByIBVpyf6HPLIrh5Rv49lN6Lre_LA0v68',
+      'AIzaSyDd_sQjAGvDtkL8JC4Z5C5V5k5uCfaKEW8',
+      'AIzaSyCyRNjwH_yPqiGPxpTm_F6JWgo2sEfiNzI',
+      'AIzaSyBgawf2kGHDh4hzFud7duAXN6RHT4R_ZaY',
+      'AIzaSyCyRNjwH_yPqiGPxpTm_F6JWgo2sEfiNzI',
+      'AIzaSyBmBkch1otJdpnCdbs3rTNGCUtBDvYj5Bs',
+            
     ];
     let apiIndex = 0;
 
@@ -118,18 +142,18 @@
 
     const params = new URLSearchParams(window.location.search);
     const videoId = params.get('id');
-    const videoEl = document.getElementById('video');
+    const iframe = document.getElementById('video-frame');
     const titleEl = document.getElementById('video-title');
     const metaEl = document.getElementById('video-meta');
     const commentsEl = document.getElementById('comments');
 
     if (!videoId) {
       titleEl.textContent = '無効な動画IDです';
-      videoEl.style.display = 'none';
+      iframe.style.display = 'none';
     } else {
       loadVideoInfo();
       loadComments();
-      videoEl.src = `/stream?url=https://www.youtube.com/watch?v=${videoId}`;
+      iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`;
     }
 
     async function fetchWithRetry(url) {
@@ -151,12 +175,12 @@
         const data = await fetchWithRetry(`https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${videoId}&key=API_KEY`);
         if (!data.items || data.items.length === 0) {
           titleEl.textContent = '動画が見つかりません';
-          videoEl.style.display = 'none';
+          iframe.style.display = 'none';
           return;
         }
         const video = data.items[0];
         titleEl.textContent = video.snippet.title;
-        metaEl.textContent = `${video.snippet.channelTitle} - ${new Date(video.snippet.publishedAt).toLocaleDateString()}`;
+        metaEl.innerHTML = `<a href="channel.html?id=${video.snippet.channelId}">${video.snippet.channelTitle}</a> - ${new Date(video.snippet.publishedAt).toLocaleDateString()}`;
       } catch (e) {
         alert('動画情報の取得に失敗しました。');
       }
@@ -189,6 +213,13 @@
         commentsEl.innerHTML = '<p>コメントの取得に失敗しました。</p>';
         console.error(e);
       }
+    }
+
+    // ✅ Service Worker 登録（PWA対応）
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log("Service Worker 登録成功"))
+        .catch(err => console.error("Service Worker 登録失敗:", err));
     }
   </script>
 </body>
