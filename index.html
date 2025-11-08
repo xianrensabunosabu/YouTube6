@@ -78,12 +78,8 @@
       'AIzaSyCFl7A4m0soaCJ43HaEIO_9w2_xJZ_XHVY',
     ];
     let apiKeyIndex = 0;
-    function getApiKey() {
-      return API_KEYS[apiKeyIndex];
-    }
-    function nextApiKey() {
-      apiKeyIndex = (apiKeyIndex + 1) % API_KEYS.length;
-    }
+    function getApiKey() { return API_KEYS[apiKeyIndex]; }
+    function nextApiKey() { apiKeyIndex = (apiKeyIndex + 1) % API_KEYS.length; }
 
     const STORAGE_HISTORY = 'sennin_youtube_history';
     const STORAGE_FAV = 'sennin_youtube_favorites';
@@ -228,15 +224,32 @@
     };
   </script>
 
-<!-- お問い合わせとゲームボタン -->
-<div style="text-align: center; margin: 2em 0;">
-  <a href="https://docs.google.com/forms/d/e/1FAIpQLSe0NXWhtUwApapvXSxXcxwVYAM4Paqa4GbpJ3oTPTaEH0C0uA/viewform" 
-     target="_blank" 
-     style="background: #4caf50; color: white; padding: 0.75em 1.5em; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 0 0.5em;">
-    お問い合わせと回答
-  </a>
-  <a href="game.html" 
-     style="background: #ff9800; color: white; padding: 0.75em 1.5em; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 0 0.5em;">
-    ゲーム
-  </a>
-</div>
+  <!-- お問い合わせとsennintubeボタン -->
+  <div style="text-align: center; margin: 2em 0;">
+    <a href="https://docs.google.com/forms/d/e/1FAIpQLSe0NXWhtUwApapvXSxXcxwVYAM4Paqa4GbpJ3oTPTaEH0C0uA/viewform" 
+       target="_blank" 
+       style="background: #4caf50; color: white; padding: 0.75em 1.5em; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 0 0.5em;">
+      お問い合わせと回答
+    </a>
+    <a href="game.html" 
+       style="background: #ff9800; color: white; padding: 0.75em 1.5em; text-decoration: none; border-radius: 4px; font-weight: bold; margin: 0 0.5em;">
+      sennintube
+    </a>
+  </div>
+
+  <!-- 🔽 仙人＠sugarへボタン（YouTubeを開く） -->
+  <div style="text-align: center; margin: 2em 0;">
+    <button id="sugar-btn"
+            style="background: #e91e63; color: white; padding: 0.75em 1.5em; 
+                   border: none; border-radius: 4px; font-weight: bold; cursor: pointer;">
+      仙人＠sugarへ
+    </button>
+  </div>
+
+  <script>
+    document.getElementById("sugar-btn").onclick = () => {
+      window.open("https://youtube6-lrkx.onrender.com/channel.html?id=UC2ctJtrhY7q27xg1jJFd2AQ"_blank");
+    };
+  </script>
+</body>
+</html>     
